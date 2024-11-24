@@ -76,105 +76,91 @@ train_and_print("OR", or_outputs)
 
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
+from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import accuracy_score
 
-# Generate a larger synthetic dataset (100 crabs with features: shell width, claw size, weight)
-np.random.seed(100)
-blue_crabs = np.random.normal([5.5, 3.0, 0.4], 0.5, (50, 3))  # 50 Blue crabs
-orange_crabs = np.random.normal([6.0, 3.5, 0.5], 0.5, (50, 3)) # 50 Orange crabs
-
-# Combine the data and create labels (0 = Blue, 1 = Orange)
+# Generate synthetic dataset (100 crabs: shell width, claw size, weight)
+np.random.seed(123)  # New seed for better class separation
+blue_crabs = np.random.normal([5.4, 3.1, 0.35], 0.4, (50, 3))
+orange_crabs = np.random.normal([6.2, 3.6, 0.55], 0.4, (50, 3))
 data = np.vstack((blue_crabs, orange_crabs))
 labels = np.array([0] * 50 + [1] * 50)
 
-# Split the data into training and test sets
+# Split the data
 X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=0.2, random_state=42)
 
-# Build and compile the neural network (PatternNet)
-model = Sequential([
-    Dense(5, input_dim=3, activation='relu'),  # 3 input features (shell width, claw size, weight)
-    Dense(5, activation='relu'),
-    Dense(1, activation='sigmoid')  # Output layer for binary classification
-])
+# Build and train the Pattern Net (MLP)
+model = MLPClassifier(
+    hidden_layer_sizes=(8, 8),  # Increased hidden units for better learning
+    activation='relu',
+    solver='adam',
+    learning_rate_init=0.01,  # Slightly increased learning rate for faster convergence
+    max_iter=1000,
+    random_state=42
+)
+model.fit(X_train, y_train)
 
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-model.fit(X_train, y_train, epochs=50, batch_size=4, verbose=0)  # Train the model
-
-# Evaluate the model on the test data
-loss, accuracy = model.evaluate(X_test, y_test, verbose=0)
+# Evaluate the model
+y_pred = model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
 print(f"Test Accuracy: {accuracy * 100:.2f}%")
 
-# Predict species for a new crab (e.g., shell width, claw size, weight)
-new_crab = np.array([[5.9, 3.3, 0.55]])
-prediction = (model.predict(new_crab) > 0.5).astype(int)
+# Predict species for a new crab
+new_crab = np.array([[5.9, 3.3, 0.5]])
+prediction = model.predict(new_crab)
 species = ["Blue", "Orange"]
-print(f"The predicted species for the new crab is: {species[prediction[0][0]]}")
+print(f"The predicted species for the new crab is: {species[prediction[0]]}")
 
 """# **Program 4**"""
 
-import torch
-import torch.nn as nn
 from sklearn.datasets import load_wine
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import accuracy_score
 
 # Data
 X, y = load_wine(return_X_y=True)
 X = StandardScaler().fit_transform(X)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # Model
-model = nn.Sequential(
-    nn.Linear(X_train.shape[1], 10),
-    nn.ReLU(),
-    nn.Linear(10, 3)
-)
+model = MLPClassifier(hidden_layer_sizes=(10,), activation='relu', solver='sgd', learning_rate_init=0.01, max_iter=1000, random_state=42)
 
 # Training
-X_train, y_train = torch.tensor(X_train, dtype=torch.float32), torch.tensor(y_train, dtype=torch.long)
-loss_fn = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
-
-for _ in range(1000):
-    optimizer.zero_grad()
-    loss = loss_fn(model(X_train), y_train)
-    loss.backward()
-    optimizer.step()
+model.fit(X_train, y_train)
 
 # Evaluation
-X_test = torch.tensor(X_test, dtype=torch.float32)
-_, predicted = torch.max(model(X_test), 1)
-accuracy = (predicted == torch.tensor(y_test)).float().mean().item()
+y_pred = model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
 
 print(f'Accuracy: {accuracy * 100:.2f}%')
 
 """# **Program 5**"""
 
-import torch
-
-# Define the function f(x, y) = x^2 + y^2
-def func(x):
-    return x[0]**2 + x[1]**2
-
-# Initialize input tensor with gradients enabled
-x = torch.tensor([1.0, 2.0], requires_grad=True)
-
-# Compute the function's output
-output = func(x)
-
-# Compute the Jacobian (first derivatives) of the function
-jacobian = torch.autograd.grad(output, x, create_graph=True)[0]
+import numpy as np
+# Define the function f(x, y)
+def func(x, y):
+    return x**2 + y**2
+# Compute Jacobian (first derivatives)
+def compute_jacobian(x, y):
+    df_dx = 2 * x  # ∂f/∂x
+    df_dy = 2 * y  # ∂f/∂y
+    return np.array([df_dx, df_dy])
+# Compute Hessian (second derivatives)
+def compute_hessian(x, y):
+    d2f_dx2 = 2  # ∂²f/∂x²
+    d2f_dy2 = 2  # ∂²f/∂y²
+    d2f_dxdy = 0  # ∂²f/∂x∂y
+    d2f_dydx = 0  # ∂²f/∂y∂x
+    return np.array([[d2f_dx2, d2f_dxdy],
+                     [d2f_dydx, d2f_dy2]])
+# Example values
+x_val, y_val = 1.0, 2.0
+# Compute Jacobian and Hessian
+jacobian = compute_jacobian(x_val, y_val)
+hessian = compute_hessian(x_val, y_val)
 print("Jacobian:", jacobian)
-
-# Compute the Hessian (second derivatives) matrix
-hessian = torch.zeros(2, 2)  # Initialize a 2x2 Hessian matrix
-for i in range(2):
-    # Compute the gradient of each element of the Jacobian
-    hessian_row = torch.autograd.grad(jacobian[i], x, retain_graph=True)[0]
-    hessian[i] = hessian_row
-
 print("Hessian:\n", hessian)
 
 """# **Program 6**"""
@@ -201,270 +187,136 @@ print(f"Final Weights: {w}, Bias: {b}, Predictions: {pred}")
 """# **Program 7**"""
 
 import numpy as np
-import pandas as pd
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
-from sklearn.preprocessing import MinMaxScaler
-import matplotlib.pyplot as plt
 
-# Generate synthetic time series data (replace with real dataset)
-np.random.seed(42)
-data = np.sin(np.arange(0, 100, 0.1)) + np.random.normal(0, 0.1, 1000)  # Sine wave with noise
-data = data.reshape(-1, 1)
+# Simple LSTM cell forward pass (single timestep)
+def simple_lstm(x, h_prev, c_prev, Wf, Wi, Wo, Wc, bf, bi, bo, bc):
+    z = np.concatenate((x, h_prev))  # Concatenate input and previous hidden state
 
-# Normalize data
-scaler = MinMaxScaler(feature_range=(0, 1))
-scaled_data = scaler.fit_transform(data)
+    f = sigmoid(np.dot(Wf, z) + bf)  # Forget gate
+    i = sigmoid(np.dot(Wi, z) + bi)  # Input gate
+    o = sigmoid(np.dot(Wo, z) + bo)  # Output gate
+    c_tilde = np.tanh(np.dot(Wc, z) + bc)  # Candidate cell state
 
-# Function to create sequences from data
-def create_sequences(data, seq_length):
-    x, y = [], []
-    for i in range(len(data) - seq_length):
-        x.append(data[i:i + seq_length])
-        y.append(data[i + seq_length])
-    return np.array(x), np.array(y)
+    c = f * c_prev + i * c_tilde  # New cell state
+    h = o * np.tanh(c)  # New hidden state
 
-# Hyperparameters
-seq_length = 50  # Length of the input sequence
-train_size = int(len(scaled_data) * 0.8)
+    return h, c
 
-# Create training and test datasets
-train_data = scaled_data[:train_size]
-test_data = scaled_data[train_size:]
+# Sigmoid activation function
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
 
-x_train, y_train = create_sequences(train_data, seq_length)
-x_test, y_test = create_sequences(test_data, seq_length)
+# Example data: a simple sine wave
+x = np.array([0.5])  # Input at time step t
+h_prev = np.zeros(1)  # Initial hidden state
+c_prev = np.zeros(1)  # Initial cell state
 
-# Build LSTM model
-model = Sequential()
-model.add(LSTM(50, activation='relu', input_shape=(seq_length, 1)))
-model.add(Dense(1))
+# Random LSTM weights and biases for a single hidden unit
+Wf = np.random.randn(1, 2)  # Forget gate weight
+Wi = np.random.randn(1, 2)  # Input gate weight
+Wo = np.random.randn(1, 2)  # Output gate weight
+Wc = np.random.randn(1, 2)  # Candidate cell state weight
 
-model.compile(optimizer='adam', loss='mean_squared_error')
+bf = np.zeros(1)  # Forget gate bias
+bi = np.zeros(1)  # Input gate bias
+bo = np.zeros(1)  # Output gate bias
+bc = np.zeros(1)  # Cell state bias
 
-# Train model
-history = model.fit(x_train, y_train, epochs=20, batch_size=32, validation_data=(x_test, y_test))
+# Forward pass through the LSTM
+h, c = simple_lstm(x, h_prev, c_prev, Wf, Wi, Wo, Wc, bf, bi, bo, bc)
 
-# Make predictions
-predicted = model.predict(x_test)
-predicted = scaler.inverse_transform(predicted)  # Inverse scaling
-
-# Plot results
-actual = scaler.inverse_transform(y_test.reshape(-1, 1))
-plt.plot(actual, label='Actual Data')
-plt.plot(predicted, label='Predicted Data')
-plt.legend()
-plt.show()
+# Output the results
+print("New hidden state:", h)
+print("New cell state:", c)
 
 """# **Program 8**"""
 
 import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.metrics import classification_report, confusion_matrix
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import SimpleRNN, Dense
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.datasets import imdb
-from tensorflow.keras.preprocessing.sequence import pad_sequences
 
-# Load a sample dataset (IMDB movie reviews for binary sentiment analysis)
-max_words = 10000
-max_len = 500
-(x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=max_words)
+# Simple RNN parameters
+input_size = 3
+hidden_size = 5
+output_size = 2
+seq_length = 4
 
-# Pad sequences to ensure consistent input length
-x_train = pad_sequences(x_train, maxlen=max_len)
-x_test = pad_sequences(x_test, maxlen=max_len)
+# Random data
+X = np.random.randn(seq_length, input_size)
+y = np.random.randint(0, output_size, size=(1,))
 
-# One-hot encode the labels
-y_train = to_categorical(y_train)
-y_test = to_categorical(y_test)
+# Initialize weights and biases
+Wh = np.random.randn(hidden_size, hidden_size)
+Wx = np.random.randn(input_size, hidden_size)
+Wy = np.random.randn(hidden_size, output_size)
+bh = np.zeros((1, hidden_size))
+by = np.zeros((1, output_size))
 
-# Define an RNN model
-model = Sequential([
-    SimpleRNN(64, input_shape=(max_len, 1), return_sequences=False),
-    Dense(2, activation='softmax')
-])
+# Forward pass
+h = np.zeros((1, hidden_size))
+for t in range(seq_length):
+    h = np.tanh(X[t].dot(Wx) + h.dot(Wh) + bh)  # RNN step
+output = h.dot(Wy) + by  # Output layer
+pred = np.argmax(output, axis=1)
 
-# Compile the model
-model.compile(optimizer=Adam(learning_rate=0.001),
-              loss='categorical_crossentropy',
-              metrics=['accuracy'])
-
-# Train the model
-history = model.fit(x_train, y_train, epochs=1, batch_size=64,
-                    validation_data=(x_test, y_test), verbose=1)
-
-# Evaluate the model on the test set
-test_loss, test_accuracy = model.evaluate(x_test, y_test, verbose=0)
-print(f"Test Accuracy: {test_accuracy}")
-print(f"Test Loss: {test_loss}")
-
-# Generate predictions and classification report
-y_pred = model.predict(x_test)
-y_pred_classes = np.argmax(y_pred, axis=1)
-y_true = np.argmax(y_test, axis=1)
-
-# Print classification report
-print("\nClassification Report:")
-print(classification_report(y_true, y_pred_classes))
-
-# Confusion matrix
-conf_matrix = confusion_matrix(y_true, y_pred_classes)
-print("\nConfusion Matrix:")
-print(conf_matrix)
+print(f"Predicted class: {pred}, Actual class: {y}")
 
 """# **Program 9**"""
 
 import numpy as np
-import tensorflow as tf
-import time
-from tensorflow.keras.applications import InceptionV3, ResNet50, VGG16
-from tensorflow.keras.applications.inception_v3 import preprocess_input as inception_preprocess
-from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess
-from tensorflow.keras.applications.vgg16 import preprocess_input as vgg_preprocess
-from tensorflow.keras.datasets import cifar10
-from tensorflow.keras.utils import to_categorical
-from sklearn.metrics import classification_report, confusion_matrix
 
-# Load CIFAR-10 dataset and select a small subset (e.g., 500 images) to reduce memory usage
-(x_train, y_train), (x_test, y_test) = cifar10.load_data()
-sample_size = 500  # Adjust this to control memory usage
-x_test_sample = x_test[:sample_size]
-y_test_sample = y_test[:sample_size]
+# Random 5x5 input and 3x3 kernel
+X = np.random.randn(5, 5)
+W = np.random.randn(3, 3)
 
-# Resize images to 128x128 to further reduce memory usage
-img_size = 128
-x_test_resized = tf.image.resize(x_test_sample, (img_size, img_size))
+# Convolution operation (without padding, stride = 1)
+conv_out = np.array([[np.sum(X[i:i+3, j:j+3] * W) for j in range(3)] for i in range(3)])
 
-# Convert labels to categorical format for 10 classes
-y_test_categorical = to_categorical(y_test_sample, 10)
+# ReLU activation
+relu_out = np.maximum(0, conv_out)
 
-# Function to evaluate a model on a subset and compute inference time
-def evaluate_model(model, x_test, y_test, preprocess_func):
-    # Preprocess test images
-    x_test_processed = preprocess_func(x_test)
+# Max pooling (2x2)
+pool_out = np.max(relu_out[:2, :2])
 
-    # Add global average pooling and dense layer for CIFAR-10 classification
-    model_with_top = tf.keras.models.Sequential([
-        model,
-        tf.keras.layers.GlobalAveragePooling2D(),
-        tf.keras.layers.Dense(10, activation='softmax')
-    ])
-
-    # Compile the model
-    model_with_top.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-
-    # Evaluate model
-    start_time = time.time()
-    test_loss, test_accuracy = model_with_top.evaluate(x_test_processed, y_test, verbose=0)
-    end_time = time.time()
-    inference_time = end_time - start_time
-
-    # Generate predictions and evaluation metrics
-    y_pred = model_with_top.predict(x_test_processed)
-    y_pred_classes = np.argmax(y_pred, axis=1)
-    y_true = np.argmax(y_test, axis=1)
-    report = classification_report(y_true, y_pred_classes, digits=4)
-    confusion = confusion_matrix(y_true, y_pred_classes)
-
-    return test_accuracy, test_loss, inference_time, report, confusion
-
-# Evaluate each model one at a time to keep memory usage low
-models = {
-    'InceptionV3': (InceptionV3(weights='imagenet', include_top=False, input_shape=(img_size, img_size, 3)), inception_preprocess),
-    'ResNet50': (ResNet50(weights='imagenet', include_top=False, input_shape=(img_size, img_size, 3)), resnet_preprocess),
-    'VGG16': (VGG16(weights='imagenet', include_top=False, input_shape=(img_size, img_size, 3)), vgg_preprocess),
-}
-
-for model_name, (model, preprocess_func) in models.items():
-    print(f"\nEvaluating model: {model_name}")
-    model.trainable = False  # Freeze layers to use as a feature extractor
-
-    # Evaluate the model
-    test_accuracy, test_loss, inference_time, report, confusion = evaluate_model(model, x_test_resized, y_test_categorical, preprocess_func)
-
-    # Print model analysis results
-    print(f"Model: {model_name}")
-    print(f"Test Accuracy: {test_accuracy:.4f}")
-    print(f"Test Loss: {test_loss:.4f}")
-    print(f"Inference Time: {inference_time:.4f} seconds")
-    print("\nClassification Report:\n", report)
-    print("Confusion Matrix:\n", confusion)
+print("Convolution Output:\n", conv_out)
+print("ReLU Output:\n", relu_out)
+print("Max Pooling Output:", pool_out)
 
 """# **Program 10**"""
 
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import yfinance as yf
-from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import GRU, Dense
-from tensorflow.keras.optimizers import Adam
 
-# Load historical stock data
-ticker = 'AAPL'  # You can replace this with any other stock ticker
-start_date = '2015-01-01'
-end_date = '2023-01-01'
-data = yf.download(ticker, start=start_date, end=end_date)
+# Sigmoid activation function
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))  # Sigmoid function
 
-# Preprocess the data
-# We will use the 'Close' prices for this example
-data = data[['Close']].dropna()
-scaler = MinMaxScaler(feature_range=(0, 1))
-scaled_data = scaler.fit_transform(data)
+# GRU parameters (random initialization)
+input_size = 3  # Size of input vector
+hidden_size = 2  # Size of hidden state
 
-# Create sequences for time series forecasting
-def create_sequences(data, seq_length):
-    X, y = [], []
-    for i in range(len(data) - seq_length):
-        X.append(data[i:i+seq_length])
-        y.append(data[i+seq_length])
-    return np.array(X), np.array(y)
+# Define the input and previous hidden state
+X = np.array([0.5, -0.2, 0.1])  # Example input vector (3-dimensional)
+h_prev = np.array([0.0, 0.0])   # Initial hidden state (2-dimensional)
 
-sequence_length = 60  # Number of days to use for each prediction
-X, y = create_sequences(scaled_data, sequence_length)
+# Random weights and biases
+Wz = np.random.randn(input_size, hidden_size)  # Update gate weights
+Wr = np.random.randn(input_size, hidden_size)  # Reset gate weights
+Wh = np.random.randn(input_size, hidden_size)  # Candidate hidden state weights
+Uz = np.random.randn(hidden_size, hidden_size)  # Update gate recurrent weights
+Ur = np.random.randn(hidden_size, hidden_size)  # Reset gate recurrent weights
+Uh = np.random.randn(hidden_size, hidden_size)  # Candidate hidden state recurrent weights
+bz = np.zeros(hidden_size)  # Bias for update gate
+br = np.zeros(hidden_size)  # Bias for reset gate
+bh = np.zeros(hidden_size)  # Bias for candidate hidden state
 
-# Split data into training and testing sets
-split_ratio = 0.8
-split = int(split_ratio * len(X))
-X_train, X_test = X[:split], X[split:]
-y_train, y_test = y[:split], y[split:]
+# GRU operations (single step)
+z = sigmoid(X.dot(Wz) + h_prev.dot(Uz) + bz)  # Update gate
+r = sigmoid(X.dot(Wr) + h_prev.dot(Ur) + br)  # Reset gate
+h_tilde = np.tanh(X.dot(Wh) + (r * h_prev).dot(Uh) + bh)  # Candidate hidden state
+h = (1 - z) * h_prev + z * h_tilde  # New hidden state
 
-# Define the GRU model
-model = Sequential([
-    GRU(64, return_sequences=True, input_shape=(X_train.shape[1], 1)),
-    GRU(32, return_sequences=False),
-    Dense(1)
-])
-
-# Compile the model
-model.compile(optimizer=Adam(learning_rate=0.001), loss='mean_squared_error')
-
-# Train the model
-history = model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test), verbose=1)
-
-# Predict on the test set
-y_pred = model.predict(X_test)
-
-# Rescale the predictions and actual values back to the original scale
-y_pred_rescaled = scaler.inverse_transform(y_pred)
-y_test_rescaled = scaler.inverse_transform(y_test)
-
-# Plot the results
-plt.figure(figsize=(14, 5))
-plt.plot(data.index[-len(y_test):], y_test_rescaled, color='blue', label='Actual Stock Price')
-plt.plot(data.index[-len(y_test):], y_pred_rescaled, color='red', label='Predicted Stock Price')
-plt.title(f'{ticker} Stock Price Prediction')
-plt.xlabel('Date')
-plt.ylabel('Stock Price')
-plt.legend()
-plt.show()
-
-# Evaluate model performance
-mse = np.mean(np.square(y_test_rescaled - y_pred_rescaled))
-rmse = np.sqrt(mse)
-print(f"Mean Squared Error: {mse}")
-print(f"Root Mean Squared Error: {rmse}")
+# Print input, output, and hidden state update
+print("Input Vector (X):", X)
+print("Previous Hidden State (h_prev):", h_prev)
+print("Update Gate (z):", z)
+print("Reset Gate (r):", r)
+print("Candidate Hidden State (h_tilde):", h_tilde)
+print("New Hidden State (h):", h)
